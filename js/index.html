@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Face Tracker - Turkish Adjectives</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #ff4444;
+            margin-bottom: 20px;
+        }
+        
+        .video-container {
+            position: relative;
+            display: inline-block;
+            border: 3px solid #ff4444;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px auto;
+            display: block;
+        }
+        
+        #video {
+            display: block;
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+        }
+        
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        button {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        button:hover {
+            background: #ff6666;
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 18px;
+        }
+        
+        .features {
+            background: #333;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .features h3 {
+            color: #ff4444;
+            margin-top: 0;
+        }
+        
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .features li {
+            padding: 5px 0;
+            border-bottom: 1px solid #555;
+        }
+        
+        .features li:before {
+            content: "✓ ";
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        .adjectives {
+            background: #333;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .adjectives h3 {
+            color: #ff4444;
+            margin-top: 0;
+        }
+        
+        .adjective-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .adjective-tag {
+            background: #ff4444;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 Live Face Tracker - Turkish Adjectives</h1>
+        
+        <div class="video-container">
+            <video id="video" autoplay muted playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn">Start Tracking</button>
+            <button id="stopBtn" disabled>Stop Tracking</button>
+        </div>
+        
+        <div class="status" id="status">
+            Click "Start Tracking" to begin face detection
+        </div>
+        
+        <div class="features">
+            <h3>🎯 Features</h3>
+            <ul>
+                <li>Live face detection with red bounding boxes</li>
+                <li>Persistent Turkish adjectives above each face</li>
+                <li>Same person keeps same label until they leave</li>
+                <li>Real-time tracking with MediaPipe</li>
+                <li>Works in any modern web browser</li>
+            </ul>
+        </div>
+        
+        <div class="adjectives">
+            <h3>🇹🇷 Turkish Adjectives Used</h3>
+            <div class="adjective-list" id="adjectiveList">
+                <!-- Adjectives will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js"></script>
+    <script src="face-tracker.js"></script>
+</body>
+</html>
