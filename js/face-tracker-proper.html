@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Face Tracker - Turkish Adjectives</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #ff4444;
+            margin-bottom: 20px;
+        }
+        
+        .video-container {
+            position: relative;
+            display: inline-block;
+            border: 3px solid #ff4444;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px auto;
+            display: block;
+        }
+        
+        #video {
+            display: block;
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+        }
+        
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        button {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        button:hover {
+            background: #ff6666;
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 18px;
+        }
+        
+        .features {
+            background: #333;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .features h3 {
+            color: #ff4444;
+            margin-top: 0;
+        }
+        
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .features li {
+            padding: 5px 0;
+            border-bottom: 1px solid #555;
+        }
+        
+        .features li:before {
+            content: "✓ ";
+            color: #4CAF50;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 Real Face Tracker - Turkish Adjectives</h1>
+        
+        <div class="video-container">
+            <video id="video" autoplay muted playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn">Start Tracking</button>
+            <button id="stopBtn" disabled>Stop Tracking</button>
+        </div>
+        
+        <div class="status" id="status">
+            Click "Start Tracking" to begin face detection
+        </div>
+        
+        <div class="features">
+            <h3>🎯 Features</h3>
+            <ul>
+                <li>Real face detection (not random placement)</li>
+                <li>Red bounding boxes around actual detected faces</li>
+                <li>Persistent Turkish adjectives above each face</li>
+                <li>Same person keeps same label until they leave</li>
+                <li>Works with real face detection</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Load face-api.js for real face detection -->
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script>
+        class RealFaceTracker {
+            constructor() {
+                this.video = document.getElementById('video');
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.startBtn = document.getElementById('startBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.status = document.getElementById('status');
+                
+                // Turkish adjectives (ASCII-compatible)
+                this.adjectives = [
+                    "tatli", "mutlu", "sarhos", "guzel", "yakisikli", "sirin", 
+                    "neseli", "uzgun", "yorgun", "enerjik", "sakin", "heyecanli",
+                    "kizgin", "saskin", "gururlu", "utangac", "cesur", "korkak",
+                    "akilli", "aptal", "comert", "cimri", "dostane", "dusmanca",
+                    "sicak", "soguk", "genc", "yasli", "guclu", "zayif", "komik",
+                    "ciddi", "rahat", "gergin", "ozguvenli", "cekingen", "sosyal"
+                ];
+                
+                // Face tracking
+                this.faceTracker = new Map();
+                this.faceIdCounter = 0;
+                this.maxDistance = 100;
+                this.maxAbsentTime = 2000;
+                
+                // Face detection
+                this.isTracking = false;
+                this.modelsLoaded = false;
+                
+                this.setupEventListeners();
+                this.loadModels();
+            }
+            
+            setupEventListeners() {
+                this.startBtn.addEventListener('click', () => this.startTracking());
+                this.stopBtn.addEventListener('click', () => this.stopTracking());
+            }
+            
+            async loadModels() {
+                try {
+                    this.status.textContent = 'Loading face detection models...';
+                    
+                    // Load face-api.js models
+                    await Promise.all([
+                        faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights'),
+                        faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights'),
+                        faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights')
+                    ]);
+                    
+                    this.modelsLoaded = true;
+                    this.status.textContent = 'Models loaded! Click "Start Tracking" to begin';
+                    
+                } catch (error) {
+                    console.error('Error loading models:', error);
+                    this.status.textContent = 'Error loading face detection models';
+                }
+            }
+            
+            getRandomAdjective() {
+                return this.adjectives[Math.floor(Math.random() * this.adjectives.length)];
+            }
+            
+            calculateDistance(pos1, pos2) {
+                const center1 = {
+                    x: pos1.x + pos1.width / 2,
+                    y: pos1.y + pos1.height / 2
+                };
+                const center2 = {
+                    x: pos2.x + pos2.width / 2,
+                    y: pos2.y + pos2.height / 2
+                };
+                
+                return Math.sqrt(
+                    Math.pow(center1.x - center2.x, 2) + 
+                    Math.pow(center1.y - center2.y, 2)
+                );
+            }
+            
+            findClosestFace(newFace, existingFaces) {
+                let minDistance = Infinity;
+                let closestFaceId = null;
+                
+                for (const [faceId, faceData] of existingFaces) {
+                    const distance = this.calculateDistance(newFace, faceData.position);
+                    if (distance < minDistance && distance < this.maxDistance) {
+                        minDistance = distance;
+                        closestFaceId = faceId;
+                    }
+                }
+                
+                return closestFaceId;
+            }
+            
+            updateFaceTracking(detectedFaces) {
+                const currentTime = Date.now();
+                const currentFaces = new Map(this.faceTracker);
+                const matchedFaces = new Set();
+                
+                // Try to match new detections with existing faces
+                detectedFaces.forEach(face => {
+                    const closestId = this.findClosestFace(face, currentFaces);
+                    
+                    if (closestId) {
+                        // Update existing face
+                        const faceData = currentFaces.get(closestId);
+                        this.faceTracker.set(closestId, {
+                            label: faceData.label,
+                            lastSeen: currentTime,
+                            position: face
+                        });
+                        matchedFaces.add(closestId);
+                    } else {
+                        // New face detected
+                        const newLabel = this.getRandomAdjective();
+                        const newFaceId = `face_${this.faceIdCounter++}`;
+                        this.faceTracker.set(newFaceId, {
+                            label: newLabel,
+                            lastSeen: currentTime,
+                            position: face
+                        });
+                        matchedFaces.add(newFaceId);
+                        console.log(`New person: ${newLabel}`);
+                    }
+                });
+                
+                // Remove faces that haven't been seen recently
+                const facesToRemove = [];
+                for (const [faceId, faceData] of this.faceTracker) {
+                    if (!matchedFaces.has(faceId)) {
+                        if (currentTime - faceData.lastSeen > this.maxAbsentTime) {
+                            facesToRemove.push(faceId);
+                        }
+                    }
+                }
+                
+                facesToRemove.forEach(faceId => {
+                    const oldLabel = this.faceTracker.get(faceId).label;
+                    this.faceTracker.delete(faceId);
+                    console.log(`Person left: ${oldLabel}`);
+                });
+            }
+            
+            drawAnnotations() {
+                // Clear canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw annotations for tracked faces
+                for (const [faceId, faceData] of this.faceTracker) {
+                    const { x, y, width, height } = faceData.position;
+                    
+                    // Draw red bounding box
+                    this.ctx.strokeStyle = '#ff0000';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.strokeRect(x, y, width, height);
+                    
+                    // Draw text above the face
+                    const label = faceData.label;
+                    this.ctx.font = 'bold 20px Arial';
+                    this.ctx.fillStyle = '#ff0000';
+                    this.ctx.textAlign = 'center';
+                    
+                    const textX = x + width / 2;
+                    const textY = y - 10;
+                    
+                    // Draw text background
+                    const textWidth = this.ctx.measureText(label).width;
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                    this.ctx.fillRect(
+                        textX - textWidth / 2 - 5,
+                        textY - 25,
+                        textWidth + 10,
+                        30
+                    );
+                    
+                    // Draw text
+                    this.ctx.fillStyle = '#ff0000';
+                    this.ctx.fillText(label, textX, textY);
+                }
+            }
+            
+            async startTracking() {
+                if (!this.modelsLoaded) {
+                    this.status.textContent = 'Models not loaded yet. Please wait...';
+                    return;
+                }
+                
+                try {
+                    this.status.textContent = 'Starting camera...';
+                    
+                    // Get user media
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 640 },
+                            height: { ideal: 480 },
+                            facingMode: 'user'
+                        }
+                    });
+                    
+                    this.video.srcObject = stream;
+                    this.video.play();
+                    
+                    // Wait for video to be ready
+                    this.video.addEventListener('loadedmetadata', () => {
+                        this.canvas.width = this.video.videoWidth;
+                        this.canvas.height = this.video.videoHeight;
+                        this.startFaceDetection();
+                    });
+                    
+                } catch (error) {
+                    console.error('Error starting camera:', error);
+                    this.status.textContent = 'Error starting camera. Please check permissions.';
+                }
+            }
+            
+            startFaceDetection() {
+                this.isTracking = true;
+                this.startBtn.disabled = true;
+                this.stopBtn.disabled = false;
+                this.status.textContent = 'Face tracking started!';
+                
+                // Start face detection loop
+                this.detectFaces();
+            }
+            
+            async detectFaces() {
+                if (!this.isTracking) return;
+                
+                try {
+                    // Use face-api.js for real face detection
+                    const detections = await faceapi.detectAllFaces(this.video, new faceapi.TinyFaceDetectorOptions());
+                    
+                    if (detections.length > 0) {
+                        // Convert face-api.js detections to our format
+                        const faces = detections.map(detection => {
+                            const box = detection.box;
+                            return {
+                                x: box.x,
+                                y: box.y,
+                                width: box.width,
+                                height: box.height
+                            };
+                        });
+                        
+                        this.updateFaceTracking(faces);
+                    }
+                    
+                    this.drawAnnotations();
+                    this.status.textContent = `Tracking ${this.faceTracker.size} faces`;
+                    
+                } catch (error) {
+                    console.error('Error detecting faces:', error);
+                }
+                
+                // Continue detection
+                requestAnimationFrame(() => this.detectFaces());
+            }
+            
+            stopTracking() {
+                this.isTracking = false;
+                
+                if (this.video.srcObject) {
+                    this.video.srcObject.getTracks().forEach(track => track.stop());
+                    this.video.srcObject = null;
+                }
+                
+                // Clear canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Clear face tracker
+                this.faceTracker.clear();
+                
+                this.startBtn.disabled = false;
+                this.stopBtn.disabled = true;
+                this.status.textContent = 'Tracking stopped';
+            }
+        }
+        
+        // Initialize the face tracker when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new RealFaceTracker();
+        });
+    </script>
+</body>
+</html>

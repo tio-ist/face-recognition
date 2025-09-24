@@ -18,15 +18,14 @@ class FaceTracker {
         ];
         
         // Face tracking
-        this.faceTracker = new Map(); // face_id -> {label, lastSeen, position}
+        this.faceTracker = new Map();
         this.faceIdCounter = 0;
         this.maxDistance = 100;
-        this.maxAbsentTime = 2000; // 2 seconds
+        this.maxAbsentTime = 2000;
         
-        // MediaPipe
-        this.faceDetection = null;
-        this.camera = null;
+        // Face detection
         this.isTracking = false;
+        this.detectionInterval = null;
         
         this.setupEventListeners();
         this.populateAdjectives();
@@ -211,9 +210,9 @@ class FaceTracker {
     detectFaces() {
         if (!this.isTracking) return;
         
-        // Simple face detection using a basic approach
-        // This is a placeholder - in a real implementation you'd use a proper face detection library
-        const faces = this.simpleFaceDetection();
+        // Simulate face detection for demo
+        // In a real implementation, you'd use a proper face detection library
+        const faces = this.simulateFaceDetection();
         
         if (faces.length > 0) {
             this.updateFaceTracking(faces);
@@ -225,19 +224,17 @@ class FaceTracker {
         this.status.textContent = `Tracking ${this.faceTracker.size} faces`;
         
         // Continue detection
-        requestAnimationFrame(() => this.detectFaces());
+        setTimeout(() => this.detectFaces(), 100); // 10 FPS
     }
     
-    simpleFaceDetection() {
-        // This is a simplified face detection for demo purposes
-        // In a real implementation, you'd use MediaPipe or another face detection library
+    simulateFaceDetection() {
+        // This simulates face detection for demo purposes
+        // Replace this with real face detection library
         
-        // For now, we'll simulate face detection with some random positions
-        // This is just to demonstrate the tracking system
         const faces = [];
         
-        // Simulate face detection (replace with real detection)
-        if (Math.random() > 0.7) { // 30% chance of detecting a face
+        // Simulate face detection with some probability
+        if (Math.random() > 0.8) { // 20% chance of detecting a face
             faces.push({
                 x: Math.random() * (this.video.videoWidth - 100),
                 y: Math.random() * (this.video.videoHeight - 100),
